@@ -34,18 +34,26 @@ button.x{background:var(--acc);color:#1b1640;border:0;border-radius:8px;padding:
 canvas{width:min(800px,100%);height:auto;aspect-ratio:800/440;background:#000;border-radius:10px;touch-action:none}
 #hint{color:var(--mut);font-size:14px;text-align:center;margin:0}
 footer{text-align:center;color:var(--mut);font-size:13px;padding:20px}
+.hero{display:flex;align-items:center;justify-content:space-between;gap:20px;border-radius:18px;padding:28px 34px;margin-bottom:26px;background:linear-gradient(165deg,#0f2b35 30%,#2b6f8a);overflow:hidden;border:2px solid #3a3380}
+.hero h2{font:34px 'Bungee',Impact,sans-serif;margin:0 0 6px}
+.hero p{margin:0 0 16px;color:#cfe8f2;max-width:460px}
+.hero svg{flex:none;width:260px;margin-bottom:-28px}
+.badge{display:inline-block;background:var(--acc);color:#1b1640;font-weight:700;font-size:12px;border-radius:6px;padding:2px 8px;margin-bottom:8px}
+@media(max-width:640px){.hero svg{display:none}}
 </style>
 </head>
 <body>
 <header><h1>Pixel Pit</h1><input id="q" type="search" placeholder="Search games…" aria-label="Search games"></header>
 <main>
-<p class="intro">Pick a game and play instantly. No downloads, no sign-up.</p>
+<section class="hero"><div><span class="badge">Featured</span><h2>Slope Session</h2><p>A freeski game. Hit kickers, grind rails and land cork spins across three terrain parks.</p><button class="x" id="hp">Play now</button></div>
+<svg viewBox="0 0 260 130" aria-hidden="true"><path d="M0 130L75 30l42 55 48-78 95 123z" fill="#e8f6fc"/><path d="M0 130L55 72l45 58z" fill="#8fbdd2"/><path d="M165 7l-17 28 17-10 14 12z" fill="#fff"/></svg></section>
+<p class="intro">More games to play. No downloads, no sign-up.</p>
 <div class="chips" id="chips"></div>
 <div class="grid" id="grid"></div>
 <p class="empty" id="empty" hidden>No games match your search.</p>
 </main>
 <footer>Pixel Pit. All games are original and run in your browser.</footer>
-<div id="ov" role="dialog" aria-modal="true"><div id="bar"><h2 id="gt"></h2><button class="x" id="cl">Close</button></div><canvas id="cv" width="800" height="440"></canvas><p id="hint"></p></div>
+<div id="ov" role="dialog" aria-modal="true"><div id="bar"><h2 id="gt"></h2><span><button class="x" id="fs">Fullscreen</button> <button class="x" id="cl">Close</button></span></div><canvas id="cv" width="800" height="440"></canvas><p id="hint"></p></div>
 <script>
 const K={},cv=document.getElementById('cv'),X=cv.getContext('2d');let stop=null,open=false;
 addEventListener('keydown',e=>{K[e.code]=1;if(open&&/^(Space|Arrow)/.test(e.code))e.preventDefault()});
@@ -199,8 +207,97 @@ function brick(){
  });
 }
 
+/* ---------- Slope Session (freeski) ---------- */
+function ski(){
+ const W=800,H=440,SL=.35,AT=Math.atan(SL);
+ const P=[{n:'Park One',d:'Two kickers and a rail',ch:1500,k:[[300,100,.8],[1100,140,1]],r:[[750,200]]},
+ {n:'Big Air',d:'Huge kickers, long hang time',ch:2400,k:[[300,140,1],[1000,160,1]],r:[[1500,200]]},
+ {n:'Rail Yard',d:'Rails, rails and more rails',ch:1800,k:[[250,80,.7]],r:[[600,160],[900,120],[1150,200],[1450,140]]}];
+ let pi=0,p=P[0],mode=0,b,tot,txt,tt,pe,cy,cb,ct,best=0,pl=0,pr=0,ps=[],AC;
+ try{best=+localStorage.getItem('ski-best')||0}catch(e){}
+ const sv=()=>{best=Math.max(best,Math.floor(tot));try{localStorage.setItem('ski-best',best)}catch(e){}};
+ const bl=(f,d,t)=>{try{AC=AC||new AudioContext();const o=AC.createOscillator(),v=AC.createGain();o.type=t||'sine';o.frequency.value=f;v.gain.value=.05;v.gain.exponentialRampToValueAtTime(.001,AC.currentTime+d);o.connect(v);v.connect(AC.destination);o.start();o.stop(AC.currentTime+d)}catch(e){}};
+ const g=u=>{let h=300+u*SL;if(u>600){const m=u%p.ch;for(const[s,l,k]of p.k)if(m>s&&m<s+l)h-=(m-s)*k}return h};
+ const R=u=>{if(u<600)return 0;const m=u%p.ch;return p.r.some(([s,l])=>m>s&&m<s+l)};
+ const nm=a=>((a+Math.PI)%(2*Math.PI)+2*Math.PI)%(2*Math.PI)-Math.PI;
+ const reset=()=>{b={x:0,y:g(0),vx:3,vy:0,rot:AT,spin:0,fa:0,sa:0,gr:0,on:1,dead:0,dt:0,grind:0};tot=0;txt='';tt=0;cb=0;ct=0;cy=b.y-250;ps=[]};
+ reset();
+ const burst=n=>{for(let i=0;i<n;i++)ps.push({x:b.x,y:b.y,vx:(Math.random()-.3)*6,vy:-Math.random()*4,l:30})};
+ function play(sp,edge){
+  if(tt>0)tt--;if(ct>0&&--ct==0)cb=0;
+  ps.forEach(q=>{q.x+=q.vx;q.y+=q.vy;q.vy+=.15;q.l--});ps=ps.filter(q=>q.l>0);
+  if(b.dead){b.rot+=.3;if(--b.dt<=0){b.dead=0;b.on=1;b.y=g(b.x);b.vx=4;b.vy=0;b.rot=AT;b.fa=b.sa=b.gr=0;b.spin=0}return}
+  if(b.grind){b.x+=b.vx;if(!R(b.x)){b.grind=0;b.on=0;b.vy=0;b.fa=b.sa=b.gr=0}else{b.y=g(b.x)-30;tot+=.25;if(Math.random()<.5)ps.push({x:b.x,y:b.y+30,vx:-2-Math.random()*2,vy:-Math.random()*2,l:20})}
+   if(edge){b.grind=0;b.on=0;b.vy=-6;b.fa=b.sa=b.gr=0}return}
+  if(b.on){
+   b.vx=Math.min(b.vx+(K.ArrowUp?.12:.04),K.ArrowUp?13:10);if(K.ArrowDown)b.vx=Math.max(b.vx-.25,2);
+   if(b.vx>6&&Math.random()<.5)ps.push({x:b.x-8,y:b.y,vx:-b.vx*.3,vy:-Math.random()*2,l:22});
+   const nx=b.x+b.vx,ny=g(nx);
+   if(ny-b.y>14){const q=(g(b.x)-g(b.x-8))/8;b.vy=q*b.vx;b.x=nx;b.y+=b.vy;b.on=0;b.rot=Math.atan(q);b.spin=b.fa=b.sa=b.gr=0;bl(220,.12)}
+   else{b.x=nx;b.y=ny;b.rot=Math.atan((g(nx+6)-g(nx-6))/12);if(edge){b.on=0;b.vy=-6;b.spin=b.fa=b.sa=b.gr=0}}
+  }else{
+   b.vy+=.35;b.x+=b.vx;b.y+=b.vy;
+   const d1=(K.ArrowRight?1:0)-(K.ArrowLeft?1:0),d2=(K.KeyD?1:0)-(K.KeyA?1:0);
+   b.rot+=d1*.1;b.fa+=d1*.1;b.spin+=d2*.12;b.sa+=d2*.12;if(!d1)b.rot+=(AT-b.rot)*.03;if(sp)b.gr++;
+   const top=g(b.x)-30;
+   if(R(b.x)&&b.vy>0&&b.y>=top&&b.y-b.vy<=top+4){b.grind=1;b.y=top;b.rot=AT;txt='Rail grind';tt=90;bl(520,.1,'square');return}
+   if(b.y>=g(b.x)){
+    const t=Math.atan((g(b.x+8)-g(b.x-8))/16),d=nm(b.rot-t),dd=((b.sa%Math.PI)+Math.PI)%Math.PI,ok=Math.abs(d)<1&&(dd<.7||dd>Math.PI-.7);
+    const fl=Math.round(Math.abs(b.fa)/6.283),sn=Math.round(Math.abs(b.sa)/3.1416);
+    if(ok){let pts=fl*500+sn*200+Math.floor(b.gr/6)*10;if(fl&&sn)pts*=1.5;burst(14);bl(300,.15);
+     if(pts){cb=ct>0?Math.min(cb+1,5):1;ct=300;const n=[];
+      if(fl&&sn)n.push((fl>1?'Double ':'')+sn*180+' Cork');else{if(sn)n.push(sn*180+' Spin');if(fl)n.push((fl>1?fl+'x ':'')+(b.fa>0?'Front':'Back')+'flip')}
+      if(b.gr>12)n.push('Grab');tot+=pts*cb;txt=n.join(' + ')+'  +'+Math.floor(pts*cb);tt=150;bl(660,.25);sv()}
+     b.y=g(b.x);b.vy=0;b.on=1;b.rot=t;b.spin=0;b.fa=b.sa=b.gr=0}
+    else{b.dead=1;b.dt=70;b.vx*=.4;txt='Bail!';tt=70;cb=0;burst(20);bl(110,.3,'sawtooth');sv()}
+   }
+  }
+ }
+ function skier(sx,sy){
+  X.save();X.translate(sx,sy);X.rotate(b.rot);X.scale(.25+.75*Math.abs(Math.cos(b.spin)),1);X.lineCap='round';
+  X.fillStyle='#ff5a36';X.fillRect(-28,-3,56,4);X.beginPath();X.moveTo(28,-3);X.lineTo(36,-7);X.lineTo(28,1);X.fill();
+  X.strokeStyle='#1b2a41';X.lineWidth=6;X.beginPath();X.moveTo(0,-3);X.lineTo(0,-20);X.stroke();
+  X.strokeStyle='#ff7a3d';X.lineWidth=9;X.beginPath();X.moveTo(0,-20);X.lineTo(0,-33);X.stroke();
+  const gb=!b.on&&b.gr>0;X.strokeStyle='#ff7a3d';X.lineWidth=3;X.beginPath();X.moveTo(0,-30);X.lineTo(gb?10:12,gb?-8:-19);X.stroke();
+  X.fillStyle='#f4f1e8';X.beginPath();X.arc(0,-41,7,0,7);X.fill();X.fillStyle='#1b3a4b';X.fillRect(1,-44,7,4);X.restore();
+ }
+ function draw(){
+  const cx=b.x-250;cy+=(b.y-250-cy)*.1;
+  const gr=X.createLinearGradient(0,0,0,H);gr.addColorStop(0,'#6fc1e6');gr.addColorStop(1,'#e8f6fc');X.fillStyle=gr;X.fillRect(0,0,W,H);
+  X.fillStyle='#fff7d6';X.beginPath();X.arc(650,80,34,0,7);X.fill();
+  const mt=(f,col,y0,amp,wd)=>{const o=cx*f,i0=Math.floor(o/wd);X.fillStyle=col;for(let i=i0-1;i<=i0+Math.ceil(W/wd)+1;i++){const x=i*wd-o,h=amp*(.6+.4*Math.abs(Math.sin(i*2.3)));X.beginPath();X.moveTo(x,y0);X.lineTo(x+wd/2,y0-h);X.lineTo(x+wd,y0);X.fill()}};
+  mt(.08,'#b9d6e6',270,170,300);mt(.2,'#9fc3d6',320,120,220);
+  X.fillStyle='#e8f4fa';X.beginPath();X.moveTo(0,H);for(let i=0;i<=W;i+=8)X.lineTo(i,300+(cx+i)*SL-45-cy);X.lineTo(W,H);X.fill();
+  for(let tx=Math.floor((cx-60)/70)*70;tx<cx+W+60;tx+=70){const id=tx/70,x=tx+Math.sin(id*5)*22-cx,y=300+(tx)*SL-45-cy+Math.sin(id*3)*6,h=34+Math.abs(Math.sin(id*7))*22;
+   X.fillStyle='#5a3b22';X.fillRect(x-2,y-6,4,8);X.fillStyle='#1d5a4a';X.beginPath();X.moveTo(x,y-h);X.lineTo(x+h*.33,y-4);X.lineTo(x-h*.33,y-4);X.fill();X.fillStyle='#f4fbff';X.beginPath();X.moveTo(x,y-h);X.lineTo(x+h*.12,y-h*.72);X.lineTo(x-h*.12,y-h*.72);X.fill()}
+  X.fillStyle='#d4e6f0';X.beginPath();X.moveTo(0,H);for(let i=0;i<=W;i+=8)X.lineTo(i,g(cx+i)-cy+12);X.lineTo(W,H);X.fill();
+  X.fillStyle='#fafdff';X.beginPath();X.moveTo(0,H);for(let i=0;i<=W;i+=8)X.lineTo(i,g(cx+i)-cy);X.lineTo(W,H);X.fill();
+  X.strokeStyle='#8fb8cc';X.lineWidth=3;X.beginPath();for(let i=0;i<=W;i+=8)X[i?'lineTo':'moveTo'](i,g(cx+i)-cy);X.stroke();
+  for(let k=Math.floor(cx/p.ch)-1;k<=Math.floor(cx/p.ch)+2;k++)for(const[s,l]of p.r){const rs=k*p.ch+s;if(rs<600)continue;
+   X.strokeStyle='#4a6572';X.lineWidth=3;for(let q=0;q<=l;q+=50){X.beginPath();X.moveTo(rs+q-cx,g(rs+q)-30-cy);X.lineTo(rs+q-cx,g(rs+q)-cy);X.stroke()}
+   X.strokeStyle='#ff5a36';X.lineWidth=5;X.beginPath();X.moveTo(rs-cx,g(rs)-30-cy);X.lineTo(rs+l-cx,g(rs+l)-30-cy);X.stroke()}
+  skier(b.x-cx,b.y-cy);
+  X.fillStyle='#fff';ps.forEach(q=>{X.globalAlpha=q.l/30;X.beginPath();X.arc(q.x-cx,q.y-cy,2.5,0,7);X.fill()});X.globalAlpha=1;
+  X.fillStyle='rgba(255,255,255,.82)';X.beginPath();X.roundRect(10,10,215,62,10);X.fill();
+  T('Score '+Math.floor(tot),20,36,22,'#102b35','left');T('Speed '+Math.round(b.vx*4)+' km/h   Best '+best,20,60,14,'#2d6578','left');
+  if(cb>1&&ct>0)T('Combo x'+cb,W-90,36,24,'#ff5a36');
+  if(tt>0){X.globalAlpha=Math.min(1,tt/30);T(txt,W/2,100,28,txt=='Bail!'?'#d62828':'#102b35');X.globalAlpha=1}
+  if(mode==0){X.fillStyle='rgba(15,43,53,.82)';X.fillRect(0,0,W,H);T('Slope Session',W/2,80,44,'#fff');T('Choose a park, then press Space',W/2,115,16,'#bfe0ec');
+   P.forEach((q,i)=>{const x=55+i*245;X.fillStyle=i==pi?'#ff5a36':'#1f4756';X.beginPath();X.roundRect(x,150,220,150,12);X.fill();T(q.n,x+110,205,24);T(q.d,x+110,238,13,'#fff');T('Press '+(i+1),x+110,280,13,'#ffd9cf')});
+   T('← → to choose. In a run: R restarts, M returns here.',W/2,345,14,'#9cc3d1')}
+ }
+ return run(()=>{
+  const sp=K.Space,edge=sp&&!pe;pe=sp;
+  if(mode==0){const l=K.ArrowLeft&&!pl,r=K.ArrowRight&&!pr;pl=K.ArrowLeft;pr=K.ArrowRight;if(l)pi=(pi+2)%3;if(r)pi=(pi+1)%3;
+   ['Digit1','Digit2','Digit3'].forEach((k,i)=>{if(K[k])pi=i});if(edge||K.Enter){p=P[pi];mode=1;reset()}}
+  else if(K.KeyM){mode=0}else{if(K.KeyR)reset();play(sp,edge)}
+  draw();
+ });
+}
+
 /* ---------- Portal ---------- */
 const GAMES=[
+ {n:'Slope Session',c:'Sports',e:'⛷️',bg:'#2b6f8a',h:'Pick a park (← → or 1–3, Space). ↑ speed, ↓ brake, Space jump or grab. In the air: ← → flip, A D spin. R restart, M parks.',f:ski},
  {n:'Stunt Rider',c:'Racing',e:'🏍️',bg:'#e63946',h:'↑ gas   ↓ brake   ← → tilt in the air   R restart. Land on your wheels!',f:bike},
  {n:'Ember & Ripple',c:'Puzzle',e:'🔥💧',bg:'#2a6cff',h:'Two players. Ember: A D W. Ripple: arrow keys. Avoid the opposite element and reach both doors.',f:duo},
  {n:'Snake',c:'Arcade',e:'🐍',bg:'#2e9e4f',h:'Arrow keys or WASD. R to restart.',f:snake},
@@ -219,6 +316,8 @@ q.oninput=draw;draw();
 function play(g){document.getElementById('gt').textContent=g.n;document.getElementById('hint').textContent=g.h;ov.classList.add('on');open=true;for(const k in K)K[k]=0;stop=g.f()}
 function close(){if(stop)stop();stop=null;open=false;ov.classList.remove('on')}
 document.getElementById('cl').onclick=close;
+document.getElementById('hp').onclick=()=>play(GAMES[0]);
+document.getElementById('fs').onclick=()=>{(ov.requestFullscreen||ov.webkitRequestFullscreen||(()=>{})).call(ov)};
 addEventListener('keydown',e=>{if(e.code=='Escape'&&open)close()});
 </script>
 </body>
