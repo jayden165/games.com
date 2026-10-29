@@ -38,17 +38,23 @@ footer{text-align:center;color:var(--mut);font-size:13px;padding:20px}
 .hero h2{font:34px 'Bungee',Impact,sans-serif;margin:0 0 6px}
 .hero p{margin:0 0 16px;color:#cfe8f2;max-width:460px}
 .hero svg{flex:none;width:260px;margin-bottom:-28px}
+.tools{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:18px;color:var(--mut);font-size:14px}
+select{background:var(--card);color:var(--ink);border:2px solid #3a3380;border-radius:8px;padding:5px 8px;font:inherit}
+.thumb{position:relative}.card{display:block}
+.fav{position:absolute;top:8px;right:8px;background:rgba(0,0,0,.45);border:0;color:#fff;border-radius:50%;width:32px;height:32px;cursor:pointer;font-size:16px;padding:0}
+.nw{position:absolute;top:8px;left:8px;background:var(--acc);color:#1b1640;font:700 11px system-ui,sans-serif;font-style:normal;border-radius:5px;padding:2px 7px}
 .badge{display:inline-block;background:var(--acc);color:#1b1640;font-weight:700;font-size:12px;border-radius:6px;padding:2px 8px;margin-bottom:8px}
 @media(max-width:640px){.hero svg{display:none}}
 </style>
 </head>
 <body>
-<header><h1>Pixel Pit</h1><input id="q" type="search" placeholder="Search games…" aria-label="Search games"></header>
+<header><h1>Pixel Pit</h1><input id="q" type="search" placeholder="Search games (press /)" aria-label="Search games"></header>
 <main>
 <section class="hero"><div><span class="badge">Featured</span><h2>Slope Session</h2><p>A freeski game. Hit kickers, grind rails and land cork spins across three terrain parks.</p><button class="x" id="hp">Play now</button></div>
 <svg viewBox="0 0 260 130" aria-hidden="true"><path d="M0 130L75 30l42 55 48-78 95 123z" fill="#e8f6fc"/><path d="M0 130L55 72l45 58z" fill="#8fbdd2"/><path d="M165 7l-17 28 17-10 14 12z" fill="#fff"/></svg></section>
 <p class="intro">More games to play. No downloads, no sign-up.</p>
 <div class="chips" id="chips"></div>
+<div class="tools"><label>Sort <select id="so"><option value="df">Default</option><option value="az">A–Z</option><option value="pl">Most played</option><option value="nw">New</option></select></label><button class="chip" id="rn">Random</button><button class="chip" id="ex">Export saves</button><button class="chip" id="im">Import saves</button><span id="st"></span></div>
 <div class="grid" id="grid"></div>
 <p class="empty" id="empty" hidden>No games match your search.</p>
 </main>
@@ -60,6 +66,9 @@ addEventListener('keydown',e=>{K[e.code]=1;if(open&&/^(Space|Arrow)/.test(e.code
 addEventListener('keyup',e=>K[e.code]=0);
 cv.addEventListener('pointerdown',()=>{K.Space=1;setTimeout(()=>K.Space=0,90)});
 cv.addEventListener('pointermove',e=>{const r=cv.getBoundingClientRect();K.mx=(e.clientX-r.left)/r.width*800});
+cv.addEventListener('pointerdown',e=>{const r=cv.getBoundingClientRect();K.px=(e.clientX-r.left)/r.width*800;K.py=(e.clientY-r.top)/r.height*440;K.pd=1;K.Hold=1});
+addEventListener('pointerup',()=>K.Hold=0);
+const SB=(k,v)=>{let b=0;try{b=+localStorage.getItem('b-'+k)||0;if(v>b){b=v;localStorage.setItem('b-'+k,b)}}catch(e){}return b};
 function run(step){let on=1,l=performance.now(),a=0;(function f(t){if(!on)return;a+=Math.min(t-l,100);l=t;let n=0;while(a>=16.67){step();a-=16.67;n=1}requestAnimationFrame(f)})(l);return()=>on=0}
 const T=(s,x,y,z=20,c='#fff',al='center')=>{X.fillStyle=c;X.font='bold '+z+'px system-ui,sans-serif';X.textAlign=al;X.fillText(s,x,y)};
 
@@ -115,8 +124,9 @@ function duo(){
    if(ch=='e')P[0]={x:i*40+9,y:j*40+10,vx:0,vy:0,c:'#ff7a1a',k:['KeyA','KeyD','KeyW'],bad:'wg',ex:'E'};
    if(ch=='r')P[1]={x:i*40+9,y:j*40+10,vx:0,vy:0,c:'#3aa0ff',k:['ArrowLeft','ArrowRight','ArrowUp'],bad:'lg',ex:'R'};
    if(ch=='E'||ch=='R')ex[ch]=[i,j];if('erER'.includes(ch))r[i]='.'}));}
- function hit(p,ax){for(let j=Math.floor(p.y/40);j<=Math.floor((p.y+29.9)/40);j++)for(let i=Math.floor(p.x/40);i<=Math.floor((p.x+21.9)/40);i++)if(sol(i,j)){
-  if(ax){p.x=p.vx>0?i*40-22:i*40+40;p.vx=0}else if(p.vy>0){p.y=j*40-30;p.vy=0;p.on=1}else{p.y=j*40+40;p.vy=0}}}
+ function hit(p,ax){if(ax&&!p.vx)return;const i0=Math.floor(p.x/40),i1=Math.floor((p.x+21.9)/40),j0=Math.floor(p.y/40),j1=Math.floor((p.y+29.9)/40);
+  for(let j=j0;j<=j1;j++)for(let i=i0;i<=i1;i++)if(sol(i,j)){
+   if(ax){p.x=p.vx>0?i*40-22:i*40+40;p.vx=0}else if(p.vy>=0){p.y=j*40-30;p.vy=0;p.on=1}else{p.y=j*40+40;p.vy=0}return}}
  load();
  return run(()=>{
   if(win){if(K.KeyR){li=0;win=0;load()}}
@@ -295,9 +305,105 @@ function ski(){
  });
 }
 
+/* ---------- Neon Roll (endless ball roller) ---------- */
+function roll(){
+ let x,z,sp,ob,dead,tk,bs=SB('roll',0);
+ const reset=()=>{x=0;z=0;sp=.25;ob=[];dead=0;tk=0;for(let i=1;i<7;i++)ob.push({x:Math.random()*2.6-1.3,z:i*12+20})};reset();
+ const P=(wx,dz)=>{const s=1/(1+dz*.06);return[400+(wx-x)*270*s,150+290*s,s]};
+ return run(()=>{
+  if(K.KeyR)reset();
+  if(!dead){tk++;sp=Math.min(.25+tk/4000,.75);z+=sp;x+=((K.ArrowRight||K.KeyD?1:0)-(K.ArrowLeft||K.KeyA?1:0))*.055;
+   if(ob[ob.length-1].z<z+70)ob.push({x:Math.random()*2.6-1.3,z:ob[ob.length-1].z+8+Math.random()*7});
+   ob=ob.filter(o=>o.z>z-3);
+   if(Math.abs(x)>1.5)dead=1;ob.forEach(o=>{if(Math.abs(o.z-z-1.5)<.5&&Math.abs(o.x-x)<.4)dead=1});
+   if(dead)bs=SB('roll',Math.floor(z))}
+  const gr=X.createLinearGradient(0,0,0,440);gr.addColorStop(0,'#150a35');gr.addColorStop(.35,'#7a2a9c');gr.addColorStop(1,'#150a35');X.fillStyle=gr;X.fillRect(0,0,800,440);
+  const a=P(-1.5,0),b=P(1.5,0),c=P(1.5,80),d=P(-1.5,80);
+  X.fillStyle='#120a2a';X.beginPath();X.moveTo(a[0],a[1]);X.lineTo(b[0],b[1]);X.lineTo(c[0],c[1]);X.lineTo(d[0],d[1]);X.fill();
+  X.strokeStyle='#3a2a7a';X.lineWidth=2;for(let dz=5-(z%5);dz<80;dz+=5){const l=P(-1.5,dz),r=P(1.5,dz);X.beginPath();X.moveTo(l[0],l[1]);X.lineTo(r[0],r[1]);X.stroke()}
+  X.strokeStyle='#00e5ff';X.lineWidth=4;X.beginPath();X.moveTo(a[0],a[1]);X.lineTo(d[0],d[1]);X.moveTo(b[0],b[1]);X.lineTo(c[0],c[1]);X.stroke();
+  ob.slice().sort((m,n)=>n.z-m.z).forEach(o=>{const dz=o.z-z;if(dz<0||dz>80)return;const[sx,sy,s]=P(o.x,dz),w=.4*270*s,h=.5*290*s;X.fillStyle='#ff3d71';X.fillRect(sx-w,sy-h,2*w,h);X.fillStyle='#ff9bb5';X.fillRect(sx-w,sy-h,2*w,h*.25)});
+  const q=P(x,1.5),fall=Math.abs(x)>1.5?(Math.abs(x)-1.5)*400:0;
+  X.fillStyle='#00e5ff';X.beginPath();X.arc(400,q[1]-18+fall,20,0,7);X.fill();X.fillStyle='#fff';X.beginPath();X.arc(393,q[1]-25+fall,6,0,7);X.fill();
+  T('Score '+Math.floor(z)+'    Best '+bs,16,30,20,'#fff','left');
+  if(dead)T('Crashed. Press R to retry',400,200,30,'#fff');
+ });
+}
+
+/* ---------- Pancake Clicker (idle) ---------- */
+function idle(){
+ const U=[['Spatula',15,.1],['Griddle',100,1],['Diner',1100,8],['Factory',12000,47]];
+ let n=0,k=[0,0,0,0],pk=0,pe=0,tk=0;
+ try{const o=JSON.parse(localStorage.getItem('idle'));if(o){n=o.n;k=o.k}}catch(e){}
+ const cost=i=>Math.ceil(U[i][1]*1.15**k[i]),rate=()=>U.reduce((s,u,i)=>s+u[2]*k[i],0);
+ const sv=()=>{try{localStorage.setItem('idle',JSON.stringify({n,k}))}catch(e){}};
+ return run(()=>{
+  n+=rate()/60;if(++tk%120==0)sv();
+  const sp=K.Space,e=sp&&!pe;pe=sp;if(e){n++;pk=1}
+  if(K.pd){K.pd=0;const x=K.px,y=K.py;if(Math.hypot(x-200,y-250)<130){n++;pk=1}else U.forEach((u,i)=>{if(x>440&&x<780&&y>50+i*85&&y<125+i*85&&n>=cost(i)){n-=cost(i);k[i]++;sv()}})}
+  pk=Math.max(0,pk-.06);
+  X.fillStyle='#3b2a20';X.fillRect(0,0,800,440);
+  [0,1,2].forEach(j=>{X.fillStyle=['#c98a3d','#d99a4a','#e8ac58'][j];X.beginPath();X.ellipse(200,300-j*30,115*(1+pk*.06),38,0,0,7);X.fill()});
+  X.fillStyle='#ffe27a';X.fillRect(180,228,40,16);
+  T(Math.floor(n).toLocaleString()+' pancakes',200,70,28,'#fff');T(rate().toFixed(1)+' per second',200,100,16,'#e8c9a0');
+  U.forEach((u,i)=>{const y=50+i*85,ok=n>=cost(i);X.fillStyle=ok?'#6b4a2e':'#4a3526';X.beginPath();X.roundRect(440,y,340,75,10);X.fill();
+   T(u[0]+'  (owned '+k[i]+')',455,y+30,18,'#fff','left');T('Cost '+cost(i).toLocaleString()+'   +'+u[2]+' per sec',455,y+56,14,ok?'#ffd27a':'#a08870','left')});
+  T('Click the pancake or press Space',200,410,14,'#e8c9a0');
+ });
+}
+
+/* ---------- Hook Swing (rope physics) ---------- */
+function hook(){
+ const an=i=>[i*260+Math.sin(i*12.9)*60,70+Math.abs(Math.sin(i*4.1))*40];
+ let p,att,L,dead,pd,bs=SB('hook',0);
+ const reset=()=>{p={x:60,y:200,vx:3,vy:0};att=null;dead=0;pd=0};reset();
+ return run(()=>{
+  if(K.KeyR)reset();
+  const h=K.Space||K.Hold;
+  if(!dead){
+   if(h&&!pd){let best=null,bd=1e9;for(let i=Math.max(0,Math.floor(p.x/260)-1);i<Math.floor(p.x/260)+4;i++){const a=an(i),d=Math.hypot(a[0]-p.x,a[1]-p.y);if(a[0]>p.x-40&&d<250&&d<bd){bd=d;best=a}}if(best){att=best;L=bd}}
+   if(!h)att=null;pd=h;
+   p.vy+=.35;p.vx*=.9995;p.x+=p.vx;p.y+=p.vy;
+   if(att){const dx=p.x-att[0],dy=p.y-att[1],d=Math.hypot(dx,dy);if(d>L){const nx=dx/d,ny=dy/d;p.x=att[0]+nx*L;p.y=att[1]+ny*L;const vr=p.vx*nx+p.vy*ny;if(vr>0){p.vx-=vr*nx;p.vy-=vr*ny}}}
+   if(p.y>405){dead=1;bs=SB('hook',Math.floor(p.x/10))}
+  }
+  const cx=p.x-250,gr=X.createLinearGradient(0,0,0,440);gr.addColorStop(0,'#2b1b4d');gr.addColorStop(1,'#7a2f5a');X.fillStyle=gr;X.fillRect(0,0,800,440);
+  X.fillStyle='#ff4b1f';X.fillRect(0,410,800,30);X.fillStyle='#ff9d3d';for(let i=0;i<20;i++)X.fillRect(i*45-(cx%45),410,22,5);
+  for(let i=Math.floor(cx/260)-1;i<Math.floor(cx/260)+5;i++){if(i<0)continue;const a=an(i);X.fillStyle='#e8e0ff';X.beginPath();X.arc(a[0]-cx,a[1],9,0,7);X.fill()}
+  if(att){X.strokeStyle='#fff';X.lineWidth=3;X.beginPath();X.moveTo(att[0]-cx,att[1]);X.lineTo(p.x-cx,p.y);X.stroke()}
+  X.fillStyle='#ffd23f';X.beginPath();X.arc(p.x-cx,p.y,13,0,7);X.fill();X.fillStyle='#222';X.fillRect(p.x-cx+2,p.y-4,3,5);X.fillRect(p.x-cx+7,p.y-4,3,5);
+  T('Distance '+Math.floor(p.x/10)+'    Best '+bs,16,30,20,'#fff','left');
+  if(dead)T('Burned! Press R to retry',400,200,30,'#fff');
+ });
+}
+
+/* ---------- Tile Merge (sliding puzzle) ---------- */
+function tile(){
+ let G,sc,pv={},bs=SB('tile',0);
+ const tr=m=>m[0].map((_,i)=>m.map(r=>r[i])),sl=r=>{const a=r.filter(v=>v),o=[];for(let i=0;i<a.length;i++){if(a[i]==a[i+1]){o.push(a[i]*2);sc+=a[i]*2;i++}else o.push(a[i])}while(o.length<4)o.push(0);return o};
+ const add=()=>{const e=[];G.forEach((r,y)=>r.forEach((v,x)=>{if(!v)e.push([x,y])}));if(e.length){const[x,y]=e[Math.floor(Math.random()*e.length)];G[y][x]=Math.random()<.9?2:4}};
+ const reset=()=>{G=[[0,0,0,0],[0,0,0,0],[0,0,0,0],[0,0,0,0]];sc=0;add();add()};reset();
+ const over=()=>G.every((r,y)=>r.every((v,x)=>v&&v!=r[x+1]&&!(G[y+1]&&G[y+1][x]==v)));
+ const mv=d=>{let M=d>1?tr(G):G.map(r=>[...r]);M=M.map(r=>d%2?sl([...r].reverse()).reverse():sl(r));if(d>1)M=tr(M);if(JSON.stringify(M)!=JSON.stringify(G)){G=M;add();bs=SB('tile',sc)}};
+ const A=['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'],Wd=['KeyA','KeyD','KeyW','KeyS'],C={0:'#cdc1b4',2:'#eee4da',4:'#ede0c8',8:'#f2b179',16:'#f59563',32:'#f67c5f',64:'#f65e3b',128:'#edcf72',256:'#edcc61',512:'#edc850',1024:'#edc53f',2048:'#edc22e'};
+ return run(()=>{
+  if(K.KeyR)reset();
+  [0,1,2,3].forEach(d=>{const on=K[A[d]]||K[Wd[d]];if(on&&!pv[d])mv(d);pv[d]=on});
+  X.fillStyle='#2b2540';X.fillRect(0,0,800,440);X.fillStyle='#8f7a66';X.beginPath();X.roundRect(196,16,408,408,12);X.fill();
+  G.forEach((r,y)=>r.forEach((v,x)=>{const px=204+x*100,py=24+y*100;X.fillStyle=C[v]||'#3c3a32';X.beginPath();X.roundRect(px,py,92,92,8);X.fill();if(v)T(v,px+46,py+58,v>999?28:36,v<8?'#6b5e52':'#fff')}));
+  T('Score',100,150,16,'#bfb4e8');T(''+sc,100,185,32);T('Best',700,150,16,'#bfb4e8');T(''+bs,700,185,32);
+  if(over()){X.fillStyle='rgba(20,15,40,.7)';X.fillRect(196,16,408,408);T('No moves left. Press R',400,230,28)}
+ });
+}
+
 /* ---------- Portal ---------- */
+
 const GAMES=[
  {n:'Slope Session',c:'Sports',e:'⛷️',bg:'#2b6f8a',h:'Pick a park (← → or 1–3, Space). ↑ speed, ↓ brake, Space jump or grab. In the air: ← → flip, A D spin. R restart, M parks.',f:ski},
+ {n:'Neon Roll',c:'Racing',e:'🔮',bg:'#7b2ff7',nw:1,h:'← → or A D to steer. Dodge the blocks and stay on the track. R restarts.',f:roll},
+ {n:'Pancake Clicker',c:'Idle',e:'🥞',bg:'#d98a2b',nw:1,h:'Click the pancake or press Space, then buy upgrades to earn pancakes automatically. Saves automatically.',f:idle},
+ {n:'Hook Swing',c:'Physics',e:'🪝',bg:'#e0456b',nw:1,h:'Hold Space or press and hold to grab the nearest hook, release to fly. Stay out of the lava. R restarts.',f:hook},
+ {n:'Tile Merge',c:'Puzzle',e:'🔢',bg:'#c9a227',nw:1,h:'Arrow keys or WASD slide the tiles. Equal tiles merge. R restarts.',f:tile},
  {n:'Stunt Rider',c:'Racing',e:'🏍️',bg:'#e63946',h:'↑ gas   ↓ brake   ← → tilt in the air   R restart. Land on your wheels!',f:bike},
  {n:'Ember & Ripple',c:'Puzzle',e:'🔥💧',bg:'#2a6cff',h:'Two players. Ember: A D W. Ripple: arrow keys. Avoid the opposite element and reach both doors.',f:duo},
  {n:'Snake',c:'Arcade',e:'🐍',bg:'#2e9e4f',h:'Arrow keys or WASD. R to restart.',f:snake},
@@ -305,16 +411,32 @@ const GAMES=[
  {n:'Brick Breaker',c:'Arcade',e:'🧱',bg:'#7b3fd1',h:'Mouse or ← → to move, Space to launch. R to restart.',f:brick}];
 let cat='All';
 const grid=document.getElementById('grid'),chips=document.getElementById('chips'),q=document.getElementById('q'),ov=document.getElementById('ov');
-['All',...new Set(GAMES.map(g=>g.c))].forEach(c=>{const b=document.createElement('button');b.className='chip';b.textContent=c;b.onclick=()=>{cat=c;draw()};chips.append(b)});
+['All','Favorites',...new Set(GAMES.map(g=>g.c))].forEach(c=>{const b=document.createElement('button');b.className='chip';b.textContent=c;b.onclick=()=>{cat=c;draw()};chips.append(b)});
+const S=(()=>{try{return JSON.parse(localStorage.getItem('pp'))}catch(e){return null}})()||{};S.pl=S.pl||{};S.sec=S.sec||{};S.fav=S.fav||[];
+const save=()=>{try{localStorage.setItem('pp',JSON.stringify(S))}catch(e){}};
+let t0=0,cur=null;
 function draw(){
  [...chips.children].forEach(b=>b.classList.toggle('on',b.textContent==cat));
- const s=q.value.toLowerCase(),L=GAMES.filter(g=>(cat=='All'||g.c==cat)&&g.n.toLowerCase().includes(s));
- grid.innerHTML='';L.forEach(g=>{const b=document.createElement('button');b.className='card';b.innerHTML='<div class="thumb" style="background:'+g.bg+'">'+g.e+'</div><div class="info"><b>'+g.n+'</b><span>'+g.c+'</span></div>';b.onclick=()=>play(g);grid.append(b)});
+ const s=q.value.toLowerCase(),so=document.getElementById('so').value;
+ const L=GAMES.filter(g=>(cat=='All'||(cat=='Favorites'?S.fav.includes(g.n):g.c==cat))&&g.n.toLowerCase().includes(s));
+ if(so=='az')L.sort((a,b)=>a.n.localeCompare(b.n));if(so=='pl')L.sort((a,b)=>(S.pl[b.n]||0)-(S.pl[a.n]||0));if(so=='nw')L.sort((a,b)=>(b.nw?1:0)-(a.nw?1:0));
+ grid.innerHTML='';
+ L.forEach(g=>{const b=document.createElement('div');b.className='card';b.tabIndex=0;b.setAttribute('role','button');
+  b.innerHTML='<div class="thumb" style="background:linear-gradient(150deg,'+g.bg+',#0f0c2a)">'+g.e+(g.nw?'<i class="nw">New</i>':'')+'</div><div class="info"><b>'+g.n+'</b><span>'+g.c+(S.pl[g.n]?', '+S.pl[g.n]+' plays':'')+'</span></div>';
+  const h=document.createElement('button');h.className='fav';h.textContent=S.fav.includes(g.n)?'♥':'♡';h.setAttribute('aria-label','Favorite '+g.n);
+  h.onclick=e=>{e.stopPropagation();const i=S.fav.indexOf(g.n);i<0?S.fav.push(g.n):S.fav.splice(i,1);save();draw()};
+  b.querySelector('.thumb').append(h);b.onclick=()=>play(g);b.onkeydown=e=>{if(e.key=='Enter')play(g)};grid.append(b)});
  document.getElementById('empty').hidden=L.length>0;
+ const tp=Object.values(S.pl).reduce((a,b)=>a+b,0),ts=Object.values(S.sec).reduce((a,b)=>a+b,0);
+ document.getElementById('st').textContent=tp?tp+' plays, '+Math.max(1,Math.round(ts/60))+' min played':'';
 }
-q.oninput=draw;draw();
-function play(g){document.getElementById('gt').textContent=g.n;document.getElementById('hint').textContent=g.h;ov.classList.add('on');open=true;for(const k in K)K[k]=0;stop=g.f()}
-function close(){if(stop)stop();stop=null;open=false;ov.classList.remove('on')}
+q.oninput=draw;document.getElementById('so').onchange=draw;draw();
+function play(g){document.getElementById('gt').textContent=g.n;document.getElementById('hint').textContent=g.h;ov.classList.add('on');open=true;for(const k in K)K[k]=0;S.pl[g.n]=(S.pl[g.n]||0)+1;cur=g;t0=Date.now();save();stop=g.f()}
+function close(){if(stop)stop();stop=null;open=false;ov.classList.remove('on');if(cur){S.sec[cur.n]=(S.sec[cur.n]||0)+Math.round((Date.now()-t0)/1000);cur=null;save();draw()}}
+document.getElementById('rn').onclick=()=>play(GAMES[Math.floor(Math.random()*GAMES.length)]);
+document.getElementById('ex').onclick=()=>{const o={};for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);o[k]=localStorage.getItem(k)}const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(o)],{type:'application/json'}));a.download='pixel-pit-saves.json';a.click()};
+document.getElementById('im').onclick=()=>{const f=document.createElement('input');f.type='file';f.accept='.json';f.onchange=()=>f.files[0].text().then(t=>{try{const o=JSON.parse(t);for(const k in o)localStorage.setItem(k,o[k]);location.reload()}catch(e){alert('That file is not a valid save file.')}});f.click()};
+addEventListener('keydown',e=>{if(e.key=='/'&&!open&&document.activeElement!=q){e.preventDefault();q.focus()}});
 document.getElementById('cl').onclick=close;
 document.getElementById('hp').onclick=()=>play(GAMES[0]);
 document.getElementById('fs').onclick=()=>{(ov.requestFullscreen||ov.webkitRequestFullscreen||(()=>{})).call(ov)};
